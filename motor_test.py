@@ -75,12 +75,14 @@ def main():
             motor = Motor(pins)
 
             print(f"  Motor {i}: Forward (3s)")
-            motor.set_speed(1.0)
-            time.sleep(3)
+            motor.set_speed(0.5)
+            time.sleep(1)
+            motor.set_speed(0)
 
             print(f"  Motor {i}: Backward (3s)")
-            motor.set_speed(-1.0)
-            time.sleep(3)
+            motor.set_speed(-0.5)
+            time.sleep(1)
+            motor.set_speed(0)
 
             print(f"  Motor {i}: Stopping")
             motor.close()
