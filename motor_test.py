@@ -55,10 +55,10 @@ class Motor:
 
 # Using the pin definitions from motor_teleop.py
 MOTORS_PINS = [
-    MotorPins(in1=5, in2=6, enable=13),   # Left Motor 1
-    MotorPins(in1=16, in2=20, enable=21), # Left Motor 2
-    MotorPins(in1=17, in2=27, enable=22), # Right Motor 1
-    MotorPins(in1=23, in2=24, enable=25), # Right Motor 2
+    MotorPins(in1=21, in2=13, enable=13),   # Left Motor 1
+    MotorPins(in1=20, in2=6, enable=21), # Left Motor 2
+    MotorPins(in1=16, in2=5, enable=22), # Right Motor 1
+    MotorPins(in1=19, in2=26, enable=25), # Right Motor 2
 ]
 
 def main():
