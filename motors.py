@@ -1,4 +1,4 @@
-import RPi.GPIO as GPIO
+import lgpio
 from dataclasses import dataclass
 
 PWM_FREQUENCY = 1000  # Hz
@@ -9,48 +9,54 @@ class MotorPins:
     in2: int
 
 class Motor:
-    def __init__(self, pins: MotorPins):
+    def __init__(self, h, pins: MotorPins):
+        self.h = h
         self.pins = pins
 
-        GPIO.setup(pins.in1, GPIO.OUT)
-        GPIO.setup(pins.in2, GPIO.OUT)
+        # Claim pins as outputs
+        lgpio.gpio_claim_output(h, pins.in1)
+        lgpio.gpio_claim_output(h, pins.in2)
 
-        self.pwm_in1 = GPIO.PWM(pins.in1, PWM_FREQUENCY)
-        self.pwm_in2 = GPIO.PWM(pins.in2, PWM_FREQUENCY)
-
-        self.pwm_in1.start(0)
-        self.pwm_in2.start(0)
+        # Start PWM at 0% duty
+        lgpio.tx_pwm(h, pins.in1, PWM_FREQUENCY, 0)
+        lgpio.tx_pwm(h, pins.in2, PWM_FREQUENCY, 0)
 
     def set_speed(self, speed: float):
+        # Clamp to [-1, 1]
         speed = max(-1.0, min(1.0, speed))
-        duty = abs(speed) * 100
+        duty = abs(speed) * 100  # convert to %
 
         if speed > 0:
-            self.pwm_in1.ChangeDutyCycle(duty)
-            self.pwm_in2.ChangeDutyCycle(0)
+            # Forward
+            lgpio.tx_pwm(self.h, self.pins.in1, PWM_FREQUENCY, duty)
+            lgpio.tx_pwm(self.h, self.pins.in2, PWM_FREQUENCY, 0)
+
         elif speed < 0:
-            self.pwm_in1.ChangeDutyCycle(0)
-            self.pwm_in2.ChangeDutyCycle(duty)
+            # Reverse
+            lgpio.tx_pwm(self.h, self.pins.in1, PWM_FREQUENCY, 0)
+            lgpio.tx_pwm(self.h, self.pins.in2, PWM_FREQUENCY, duty)
+
         else:
-            self.pwm_in1.ChangeDutyCycle(0)
-            self.pwm_in2.ChangeDutyCycle(0)
+            # Stop
+            lgpio.tx_pwm(self.h, self.pins.in1, PWM_FREQUENCY, 0)
+            lgpio.tx_pwm(self.h, self.pins.in2, PWM_FREQUENCY, 0)
 
     def stop(self):
         self.set_speed(0)
 
 # Motor pin mapping from your PCB
 MOTOR_PINS = [
-    MotorPins(21, 13),  # M1
-    MotorPins(20, 6),   # M2
-    MotorPins(16, 5),   # M3
-    MotorPins(19, 26),  # M4
+    MotorPins(21, 13),  # M1 horizontal left
+    MotorPins(20, 6),   # M2 vertical left
+    MotorPins(16, 5),   # M3 vertical right
+    MotorPins(19, 26),  # M4 horizontal right
 ]
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+# Open GPIO chip
+h = lgpio.gpiochip_open(0)
 
 # Create motor objects
-motors = [Motor(p) for p in MOTOR_PINS]
+motors = [Motor(h, p) for p in MOTOR_PINS]
 
 def write_motors(m1, m2, m3, m4):
     motors[0].set_speed(m1)
