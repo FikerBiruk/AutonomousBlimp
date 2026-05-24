@@ -103,18 +103,32 @@ def run(stdscr):
             forward_cmd = max(-1.0, min(1.0, forward_cmd))
             vertical_cmd = max(-1.0, min(1.0, vertical_cmd))
 
+            # -------------------------
             # Read orientation from sensors
+            # -------------------------
             yaw, pitch, roll = sensors.read_orientation()
 
+            # These angles are already corrected by your IMU transform:
+            #   roll ≈ 0° when level
+            #   pitch ≈ 0° when level
+            #   yaw = correct heading
+            # No more transforms needed.
+
+            # -------------------------
             # Compute PID outputs
+            # -------------------------
             yaw_out = yaw_pid.update(yaw)
             pitch_out = pitch_pid.update(pitch)
             roll_out = roll_pid.update(roll)
 
+            # -------------------------
             # Mixer -> motor commands
+            # -------------------------
             m1, m2, m3, m4 = mix(forward_cmd, vertical_cmd, yaw_out, pitch_out, roll_out)
 
+            # -------------------------
             # Print status
+            # -------------------------
             stdscr.addstr(10, 0, f"Setpoints: Yaw={yaw_pid.setpoint:6.1f}°")
             stdscr.addstr(11, 0, f"Sensors:   Yaw={yaw:6.1f}°  Pitch={pitch:6.1f}°  Roll={roll:6.1f}°")
             stdscr.addstr(12, 0, f"PIDs:      Yaw={yaw_out:5.2f}  Pitch={pitch_out:5.2f}  Roll={roll_out:5.2f}")
