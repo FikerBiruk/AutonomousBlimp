@@ -6,7 +6,10 @@
 import curses
 import time
 from pid import PID
+import importlib
 import sensors
+importlib.reload(sensors)
+
 
 # PID controllers for yaw, pitch, roll
 yaw_pid   = PID(kp=0.02, ki=0.0, kd=0.002, setpoint=0.0, output_limits=(-1.0, 1.0))
