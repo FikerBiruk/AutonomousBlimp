@@ -40,21 +40,20 @@ while True:
     mx, my, mz = mag.get_xyz()
 
     # -------------------------------
-    # APPLY ORIENTATION FIXES HERE
+    # APPLY CORRECT ORIENTATION FIXES
     # -------------------------------
 
-    # 1. Flip Z-axis because PCB is upside down
+    # 1. Flip X and Z because PCB is upside-down AND rotated 180° around Y
+    ax = -ax
     az = -az
 
-    # 2. Compute yaw/pitch/roll in sensor frame
+    # 2. Compute yaw/pitch/roll in corrected frame
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
 
-    # 3. Correct roll because board is upside down
+    # 3. Fix roll (board is inverted)
     roll -= 180.0
     if roll < -180.0:
         roll += 360.0
-
-    # (Pitch and yaw are correct for your mounting)
 
     # -------------------------------
 
