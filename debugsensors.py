@@ -39,8 +39,24 @@ while True:
     gx, gy, gz = gyro.get_xyz()
     mx, my, mz = mag.get_xyz()
 
-    # Compute YPR
+    # -------------------------------
+    # APPLY ORIENTATION FIXES HERE
+    # -------------------------------
+
+    # 1. Flip Z-axis because PCB is upside down
+    az = -az
+
+    # 2. Compute yaw/pitch/roll in sensor frame
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
+
+    # 3. Correct roll because board is upside down
+    roll -= 180.0
+    if roll < -180.0:
+        roll += 360.0
+
+    # (Pitch and yaw are correct for your mounting)
+
+    # -------------------------------
 
     # Print clean debug output
     print(f"ACC:  X={ax:6.2f}  Y={ay:6.2f}  Z={az:6.2f}")
