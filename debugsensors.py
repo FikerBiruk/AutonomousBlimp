@@ -48,12 +48,12 @@ while True:
     az *= ACC_SCALE
 
     # -------------------------------
-    # APPLY ORIENTATION FIXES
+    # APPLY CORRECT ORIENTATION FIXES
     # -------------------------------
-    # Board is upside-down
+    # Board is upside-down AND rotated 180° around Z
     ax = -ax
     ay = -ay
-    az = -az
+    # DO NOT flip Z anymore — Z is already correct
 
     # Compute yaw/pitch/roll
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
