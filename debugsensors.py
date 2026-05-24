@@ -36,7 +36,7 @@ print("Debug IMU Reader Running...\nMove the blimp to see live values.\nCTRL+C t
 while True:
     # Read sensors
     ax, ay, az = acc.get_xyz()
-    gx, gy, gz = gyro.get_gyro()
+    gx, gy, gz = gyro.get_xyz()
     mx, my, mz = mag.get_mag()
 
     # Compute YPR
