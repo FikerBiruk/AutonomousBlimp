@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # flightcontrollermotors.py
-# Real sensor reads, PID loops, mixer, curses teleop, and REAL DRV8212 motor control (lgpio)
+# Real sensor reads, PID loops, mixer, curses teleop, and REAL DRV8212 motor control
 
 import curses
 import time
 from pid import PID
 import importlib
 import sensors
-import motors  # <-- your lgpio motor driver
+import motors  # <-- your original RPi.GPIO motor driver
 
 importlib.reload(sensors)
 
@@ -29,11 +29,9 @@ throttle_ramp = 0.02
 # -------------------------
 
 def mix(forward_cmd, vertical_cmd, yaw_cmd, pitch_cmd, roll_cmd):
-    # Horizontal motors: forward + yaw
     m1 = forward_cmd - yaw_cmd
     m4 = forward_cmd + yaw_cmd
 
-    # Vertical motors: vertical + pitch + roll
     m2 = vertical_cmd + pitch_cmd + roll_cmd
     m3 = vertical_cmd + pitch_cmd - roll_cmd
 
