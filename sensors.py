@@ -1,17 +1,13 @@
 # sensors.py
-# FINAL VERSION — matches debugsensors.py orientation exactly
+# FINAL CLEAN VERSION — EXACT MATCH TO debug IMU ORIENTATION
 
 import math
-import time
 from blimputils import Accelerometer, Gyroscope, Magnetometer
 
-I2C_BUS = 1
-BMI_ADDR = 0x68
-BMM_ADDR = 0x14
-
-accel = Accelerometer(bus=I2C_BUS, addr=BMI_ADDR)
-gyro  = Gyroscope(bus=I2C_BUS, addr=BMI_ADDR)
-mag   = Magnetometer(bus=I2C_BUS, addr=BMM_ADDR)
+# Instantiate drivers EXACTLY like debugsensors.py
+accel = Accelerometer()
+gyro  = Gyroscope()
+mag   = Magnetometer()
 
 ACC_SCALE = 4.0   # same as debugsensors.py
 
@@ -49,12 +45,7 @@ def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
 def read_orientation():
     # Read raw sensors
     ax, ay, az = accel.get_xyz()
-    gx, gy, gz = gyro.get_xyz()
     mx, my, mz = mag.get_xyz()
-
-    # -------------------------------
-    # MATCH EXACT ORIENTATION FIXES
-    # -------------------------------
 
     # Scale accel
     ax *= ACC_SCALE
