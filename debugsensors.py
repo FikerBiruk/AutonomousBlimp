@@ -37,7 +37,7 @@ while True:
     # Read sensors
     ax, ay, az = acc.get_xyz()
     gx, gy, gz = gyro.get_xyz()
-    mx, my, mz = mag.get_mag()
+    mx, my, mz = mag.get_rate()
 
     # Compute YPR
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
