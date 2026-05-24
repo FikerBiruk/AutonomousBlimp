@@ -40,17 +40,23 @@ while True:
     mx, my, mz = mag.get_xyz()
 
     # -------------------------------
-    # APPLY CORRECT ORIENTATION FIXES
+    # APPLY FINAL ORIENTATION FIXES
     # -------------------------------
 
-    # 1. Flip X and Z because PCB is upside-down AND rotated 180° around Y
+    # Board is upside-down AND rotated 180° around Z
     ax = -ax
+    ay = -ay
     az = -az
 
-    # 2. Compute yaw/pitch/roll in corrected frame
+    # Compute yaw/pitch/roll in corrected frame
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
 
-    # 3. Fix roll (board is inverted)
+    # Fix yaw (board rotated 180° around Z)
+    yaw += 180.0
+    if yaw > 180.0:
+        yaw -= 360.0
+
+    # Fix roll (board inverted)
     roll -= 180.0
     if roll < -180.0:
         roll += 360.0
