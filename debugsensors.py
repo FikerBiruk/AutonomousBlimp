@@ -7,6 +7,8 @@ acc = Accelerometer()
 gyro = Gyroscope()
 mag = Magnetometer()
 
+ACC_SCALE = 4.0   # Convert raw accel to m/s²
+
 def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
     # Normalize accelerometer
     norm_acc = math.sqrt(ax*ax + ay*ay + az*az)
@@ -24,7 +26,6 @@ def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
 
     yaw = math.atan2(-my2, mx2)
 
-    # Convert to degrees
     return (
         math.degrees(yaw),
         math.degrees(pitch),
@@ -40,15 +41,21 @@ while True:
     mx, my, mz = mag.get_xyz()
 
     # -------------------------------
-    # APPLY FINAL ORIENTATION FIXES
+    # FIX ACCELEROMETER SCALING
     # -------------------------------
+    ax *= ACC_SCALE
+    ay *= ACC_SCALE
+    az *= ACC_SCALE
 
-    # Board is upside-down AND rotated 180° around Z
+    # -------------------------------
+    # APPLY ORIENTATION FIXES
+    # -------------------------------
+    # Board is upside-down
     ax = -ax
     ay = -ay
     az = -az
 
-    # Compute yaw/pitch/roll in corrected frame
+    # Compute yaw/pitch/roll
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
 
     # Fix yaw (board rotated 180° around Z)
@@ -63,7 +70,6 @@ while True:
 
     # -------------------------------
 
-    # Print clean debug output
     print(f"ACC:  X={ax:6.2f}  Y={ay:6.2f}  Z={az:6.2f}")
     print(f"GYR:  X={gx:6.2f}  Y={gy:6.2f}  Z={gz:6.2f}")
     print(f"MAG:  X={mx:6.2f}  Y={my:6.2f}  Z={mz:6.2f}")
