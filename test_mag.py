@@ -2,7 +2,6 @@ from blimputils import Magnetometer
 import time, math
 
 mag = Magnetometer()
-mag.init()
 
 print("Move the board. Ctrl+C to stop.\n")
 
