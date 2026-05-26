@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+import curses
+import time
+from dataclasses import dataclass
+
+import RPi.GPIO as GPIO
+
+PWM_FREQUENCY = 1000  # Hz
+
+# -----------------------------
+# Motor Driver (DRV8212P)
+# -----------------------------
+
+@dataclass(frozen=True)
+class MotorPins:
+    in1: int
+    in2: int
+
+class Motor:
+    def __init__(self, pins: MotorPins):
+        self.pins = pins
+
+        GPIO.setup(pins.in1, GPIO.OUT)
+        GPIO.setup(pins.in2, GPIO.OUT)
+
+        self.pwm_in1 = GPIO.PWM(pins.in1, PWM_FREQUENCY)
+        self.pwm_in2 = GPIO.PWM(pins.in2, PWM_FREQUENCY)
+
+        self.pwm_in1.start(0)
+        self.pwm_in2.start(0)
+
+    def set_speed(self, speed: float):
+        speed = max(-1.0, min(1.0, speed))
+        duty = abs(speed) * 100
+
+        if speed > 0:
+            self.pwm_in1.ChangeDutyCycle(duty)
+            self.pwm_in2.ChangeDutyCycle(0)
+        elif speed < 0:
+            self.pwm_in1.ChangeDutyCycle(0)
+            self.pwm_in2.ChangeDutyCycle(duty)
+        else:
+            self.pwm_in1.ChangeDutyCycle(0)
+            self.pwm_in2.ChangeDutyCycle(0)
+
+    def stop(self):
+        self.set_speed(0)
+
+    def close(self):
+        self.stop()
+        self.pwm_in1.stop()
+        self.pwm_in2.stop()
+
+
+# -----------------------------
+# Motor Mapping (your PCB)
+# -----------------------------
+# Motor 1 = horizontal left
+# Motor 2 = vertical left
+# Motor 3 = vertical right
+# Motor 4 = horizontal right
+
+MOTOR_PINS = [
+    MotorPins(21, 13),  # Motor 1
+    MotorPins(20, 6),   # Motor 2
+    MotorPins(16, 5),   # Motor 3
+    MotorPins(19, 26),  # Motor 4
+]
+
+# -----------------------------
+# Teleop Commands
+# -----------------------------
+# Horizontal motors: 1 & 4
+# Vertical motors:   2 & 3
+
+def apply_drive(motors, forward, turn, vertical):
+    """
+    forward:  -1 to 1
+    turn:     -1 to 1
+    vertical: -1 to 1
+    """
+
+    # Horizontal motors
+    left_h  = forward - turn
+    right_h = forward + turn
+
+    # Vertical motors (both push downwards)
+    up_left  = vertical
+    up_right = vertical
+
+    # Motor order: 1,2,3,4
+    speeds = [
+        left_h,     # Motor 1
+        up_left,    # Motor 2
+        up_right,   # Motor 3
+        right_h     # Motor 4
+    ]
+
+    for motor, speed in zip(motors, speeds):
+        motor.set_speed(speed)
+
+
+# -----------------------------
+# Teleop Loop
+# -----------------------------
+
+def run(stdscr):
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+
+    motors = [Motor(p) for p in MOTOR_PINS]
+
+    stdscr.nodelay(True)
+    curses.curs_set(0)
+    stdscr.addstr(0, 0, "WASD = move, Q = rise, E = fall, SPACE = stop, X = hover, Q to quit")
+    stdscr.refresh()
+
+    forward = 0.0
+    turn = 0.0
+    vertical = 0.0
+
+    try:
+        while True:
+            key = stdscr.getch()
+
+            if key != -1:
+                if key in (ord("q"), ord("Q")):
+                    break
+
+                if key == ord("w"):
+                    forward = 1.0
+                elif key == ord("s"):
+                    forward = -1.0
+                elif key == ord("a"):
+                    turn = -0.7
+                elif key == ord("d"):
+                    turn = 0.7
+                elif key == ord(" "):
+                    forward = turn = vertical = 0.0
+                elif key == ord("x"):
+                    vertical = 0.0
+                elif key == ord("q"):  # rise
+                    vertical = 1.0
+                elif key == ord("e"):  # fall
+                    vertical = -1.0
+
+                stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
+                stdscr.refresh()
+
+            # Apply motor speeds continuously
+            apply_drive(motors, forward, turn, vertical)
+
+            time.sleep(0.01)
+
+    finally:
+        for m in motors:
+            m.close()
+        GPIO.cleanup()
+
+
+if __name__ == "__main__":
+    curses.wrapper(run)
