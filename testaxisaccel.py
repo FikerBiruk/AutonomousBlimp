@@ -2,7 +2,6 @@ from blimputils import Accelerometer
 import time
 
 accel = Accelerometer()
-accel.init()
 
 print("Hold the board flat, upside down. Rotate 90° RIGHT each time.\n")
 
