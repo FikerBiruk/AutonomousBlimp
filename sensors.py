@@ -1,5 +1,5 @@
-# sensors.py — FINAL FIXED VERSION
-# For upside‑down PCB + magnetometer rotated 90°
+# sensors.py — FINAL CLEAN VERSION
+# Correct for upside‑down PCB (chip facing down)
 
 import math
 from blimputils import Accelerometer, Gyroscope, Magnetometer
@@ -31,7 +31,11 @@ def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
 
     # Tilt‑compensated magnetometer
     mx2 = mx * math.cos(pitch) + mz * math.sin(pitch)
-    my2 = mx * math.sin(roll) * math.sin(pitch) + my * math.cos(roll) - mz * math.sin(roll) * math.cos(pitch)
+    my2 = (
+            mx * math.sin(roll) * math.sin(pitch)
+            + my * math.cos(roll)
+            - mz * math.sin(roll) * math.cos(pitch)
+    )
 
     yaw = math.atan2(-my2, mx2)
 
@@ -51,21 +55,15 @@ def read_orientation():
     ay *= ACC_SCALE
     az *= ACC_SCALE
 
-    # BOARD IS UPSIDE‑DOWN
+    # BOARD IS UPSIDE‑DOWN (chip facing down)
     ax = -ax
     ay = -ay
     az = -az
 
-    # MAGNETOMETER — only upside‑down flip
+    # MAGNETOMETER — upside‑down flip only
     mx = -mx_raw
     my = -my_raw
-    mz = -mz_raw
-
-
-
-    # ALSO FLIP X/Y FOR UPSIDE‑DOWN BOARD
-    mx = -mx
-    my = -my
+    mz = -mz
 
     # Compute yaw/pitch/roll
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
