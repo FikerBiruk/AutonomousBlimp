@@ -1,15 +1,14 @@
 # sensors.py
-# FINAL CLEAN VERSION — EXACT MATCH TO debug IMU ORIENTATION
+# Corrected for upside‑down PCB (chip facing down)
 
 import math
 from blimputils import Accelerometer, Gyroscope, Magnetometer
 
-# Instantiate drivers EXACTLY like debugsensors.py
 accel = Accelerometer()
 gyro  = Gyroscope()
 mag   = Magnetometer()
 
-ACC_SCALE = 4.0   # same as debugsensors.py
+ACC_SCALE = 4.0
 
 def init_sensors():
     try: accel.init()
@@ -30,7 +29,7 @@ def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
     pitch = math.asin(-ax)
     roll  = math.atan2(ay, az)
 
-    # Tilt-compensated magnetometer
+    # Tilt‑compensated magnetometer
     mx2 = mx * math.cos(pitch) + mz * math.sin(pitch)
     my2 = mx * math.sin(roll) * math.sin(pitch) + my * math.cos(roll) - mz * math.sin(roll) * math.cos(pitch)
 
@@ -43,7 +42,7 @@ def compute_yaw_pitch_roll(ax, ay, az, mx, my, mz):
     )
 
 def read_orientation():
-    # Read raw sensors
+    # Raw sensor reads
     ax, ay, az = accel.get_xyz()
     mx, my, mz = mag.get_xyz()
 
@@ -52,22 +51,26 @@ def read_orientation():
     ay *= ACC_SCALE
     az *= ACC_SCALE
 
-    # Board is upside-down AND rotated 180° around Z
+    # BOARD IS UPSIDE‑DOWN (chip facing down)
     ax = -ax
     ay = -ay
-    # DO NOT flip Z — Z is correct
+    az = -az   # <-- this was missing before
+
+    # Magnetometer also flips X/Y when upside‑down
+    mx = -mx
+    my = -my
+    # mz stays the same
 
     # Compute yaw/pitch/roll
     yaw, pitch, roll = compute_yaw_pitch_roll(ax, ay, az, mx, my, mz)
 
-    # Fix yaw (board rotated 180° around Z)
-    yaw += 180.0
-    if yaw > 180.0:
-        yaw -= 360.0
+    # Fix yaw range to 0–360
+    if yaw < 0:
+        yaw += 360.0
 
-    # Fix roll (board inverted)
-    roll -= 180.0
-    if roll < -180.0:
-        roll += 360.0
+    # Fix roll for upside‑down board
+    roll = roll + 180.0
+    if roll > 180.0:
+        roll -= 360.0
 
     return yaw, pitch, roll
