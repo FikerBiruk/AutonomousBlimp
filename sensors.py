@@ -56,10 +56,11 @@ def read_orientation():
     ay = -ay
     az = -az
 
-    # MAGNETOMETER IS ROTATED 90° RELATIVE TO ACCEL (corrected)
-    mx = -my_raw
-    my = -mx_raw
-    # mz stays the same
+    # MAGNETOMETER — only upside‑down flip
+    mx = -mx_raw
+    my = -my_raw
+    mz = -mz_raw
+
 
 
     # ALSO FLIP X/Y FOR UPSIDE‑DOWN BOARD
