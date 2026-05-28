@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-import curses
+import sys
+import termios
+import tty
 import time
+import RPi.GPIO as GPIO
 from dataclasses import dataclass
 
-import RPi.GPIO as GPIO
-
-PWM_FREQUENCY = 1000  # Hz
-
-# -----------------------------
-# Motor Driver (DRV8212P)
-# -----------------------------
+PWM_FREQUENCY = 1000
 
 @dataclass(frozen=True)
 class MotorPins:
@@ -19,7 +16,6 @@ class MotorPins:
 class Motor:
     def __init__(self, pins: MotorPins):
         self.pins = pins
-
         GPIO.setup(pins.in1, GPIO.OUT)
         GPIO.setup(pins.in2, GPIO.OUT)
 
@@ -46,117 +42,86 @@ class Motor:
     def stop(self):
         self.set_speed(0)
 
-    def close(self):
-        self.stop()
-        self.pwm_in1.stop()
-        self.pwm_in2.stop()
-
-
-# -----------------------------
-# Motor Mapping (your PCB)
-# -----------------------------
-# Motor 1 = horizontal left
-# Motor 2 = vertical left
-# Motor 3 = vertical right
-# Motor 4 = horizontal right
-
+# Motor mapping
 MOTOR_PINS = [
-    MotorPins(21, 13),  # Motor 1
-    MotorPins(20, 6),   # Motor 2
-    MotorPins(16, 5),   # Motor 3
-    MotorPins(19, 26),  # Motor 4
+    MotorPins(21, 13),  # Motor 1 (front-left)
+    MotorPins(20, 6),   # Motor 2 (vertical-left)
+    MotorPins(16, 5),   # Motor 3 (vertical-right)
+    MotorPins(19, 26),  # Motor 4 (front-right)
 ]
 
-# -----------------------------
-# Teleop Commands
-# -----------------------------
-# Horizontal motors: 1 & 4
-# Vertical motors:   2 & 3
+def getch():
+    """Non-blocking single keypress reader."""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return ch
 
-def apply_drive(motors, forward, turn, vertical):
-    """
-    forward:  -1 to 1
-    turn:     -1 to 1
-    vertical: -1 to 1
-    """
-
-    # Horizontal motors
-    left_h  = forward - turn
-    right_h = forward + turn
-
-    # Vertical motors (both push downwards)
-    up_left  = vertical
-    up_right = vertical
-
-    # Motor order: 1,2,3,4
-    speeds = [
-        left_h,     # Motor 1
-        up_left,    # Motor 2
-        up_right,   # Motor 3
-        right_h     # Motor 4
-    ]
-
-    for motor, speed in zip(motors, speeds):
-        motor.set_speed(speed)
-
-
-# -----------------------------
-# Teleop Loop
-# -----------------------------
-
-def run(stdscr):
+def main():
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
     motors = [Motor(p) for p in MOTOR_PINS]
 
-    stdscr.nodelay(True)
-    curses.curs_set(0)
-    stdscr.addstr(0, 0, "WASD = move, Q = rise, E = fall, SPACE = stop, X = hover, Q to quit")
-    stdscr.refresh()
+    print("\nKeyboard Teleop Active")
+    print("Controls:")
+    print("  W = forward")
+    print("  S = backward")
+    print("  A = turn left")
+    print("  D = turn right")
+    print("  E = up")
+    print("  Q = down")
+    print("  X = stop all")
+    print("  Z = quit\n")
 
-    forward = 0.0
-    turn = 0.0
-    vertical = 0.0
+    forward_speed = 0.6
+    turn_speed = 0.6
+    vertical_speed = 0.6
 
     try:
         while True:
-            key = stdscr.getch()
+            key = getch()
 
-            if key != -1:
-                if key in (ord("q"), ord("Q")):
-                    break
+            if key == "w":
+                motors[0].set_speed(forward_speed)
+                motors[3].set_speed(forward_speed)
 
-                if key == ord("w"):
-                    forward = 1.0
-                elif key == ord("s"):
-                    forward = -1.0
-                elif key == ord("a"):
-                    turn = -0.7
-                elif key == ord("d"):
-                    turn = 0.7
-                elif key == ord(" "):
-                    forward = turn = vertical = 0.0
-                elif key == ord("x"):
-                    vertical = 0.0
-                elif key == ord("q"):  # rise
-                    vertical = 1.0
-                elif key == ord("e"):  # fall
-                    vertical = -1.0
+            elif key == "s":
+                motors[0].set_speed(-forward_speed)
+                motors[3].set_speed(-forward_speed)
 
-                stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
-                stdscr.refresh()
+            elif key == "a":
+                motors[0].set_speed(-turn_speed)
+                motors[3].set_speed(turn_speed)
 
-            # Apply motor speeds continuously
-            apply_drive(motors, forward, turn, vertical)
+            elif key == "d":
+                motors[0].set_speed(turn_speed)
+                motors[3].set_speed(-turn_speed)
 
-            time.sleep(0.01)
+            elif key == "e":
+                motors[1].set_speed(vertical_speed)
+                motors[2].set_speed(vertical_speed)
+
+            elif key == "q":
+                motors[1].set_speed(-vertical_speed)
+                motors[2].set_speed(-vertical_speed)
+
+            elif key == "x":
+                for m in motors:
+                    m.stop()
+
+            elif key == "z":
+                break
 
     finally:
         for m in motors:
-            m.close()
+            m.stop()
         GPIO.cleanup()
-
+        print("\nTeleop ended. Motors stopped.")
 
 if __name__ == "__main__":
-    curses.wrapper(run)
+    main()
