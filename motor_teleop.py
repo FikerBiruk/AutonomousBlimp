@@ -110,28 +110,35 @@ def run(stdscr):
 
     motors = [Motor(p) for p in MOTOR_PINS]
 
-    stdscr.nodelay(True)
+    # Use a short blocking timeout so we can treat lack of key within the
+    # timeout as a key-release (i.e. user not actively holding the key).
+    # This makes motors run only while a key is actively held.
+    stdscr.timeout(50)  # milliseconds
     curses.curs_set(0)
     # Note: 'q' is rise, use 'z' to quit (avoid duplicate 'q')
-    stdscr.addstr(0, 0, "WASD = move, Q = rise, E = fall, SPACE = stop, X = hover, Z = quit")
+    stdscr.addstr(0, 0, "WASD = move (hold), Q = rise (hold), E = fall (hold), SPACE = stop, X = hover, Z = quit")
     stdscr.refresh()
 
     forward = 0.0
     turn = 0.0
     vertical = 0.0
+    # Timestamp of the last received key event. We keep motors active for a
+    # short grace period after the last key to tolerate OS key-repeat delays.
+    last_key_time = 0.0
+    hold_timeout = 0.15  # seconds
 
     try:
         while True:
-            # Read a key (non-blocking)
+            # Read a key (blocks up to stdscr.timeout milliseconds)
             key = stdscr.getch()
+            now = time.time()
 
-            # If no keypress, reset commands so motors stop on key release.
-            # This ensures that when you release a control key the value returns to 0.
-            if key == -1:
-                forward = 0.0
-                turn = 0.0
-                vertical = 0.0
-            else:
+            if key != -1:
+                # Record the time we last saw a key so we can keep motors
+                # running for a short grace period even if OS key repeats are
+                # delayed.
+                last_key_time = now
+
                 # Quit (use 'z' to quit to avoid conflicting with 'q' for rise)
                 if key in (ord("z"), ord("Z")):
                     break
@@ -155,6 +162,14 @@ def run(stdscr):
 
                 stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
                 stdscr.refresh()
+            else:
+                # No key event this iteration - if it's been longer than
+                # hold_timeout since the last key event, consider keys
+                # released and clear commands so motors stop.
+                if now - last_key_time > hold_timeout:
+                    forward = 0.0
+                    turn = 0.0
+                    vertical = 0.0
 
             # Apply motor speeds continuously
             apply_drive(motors, forward, turn, vertical)
