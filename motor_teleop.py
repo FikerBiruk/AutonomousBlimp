@@ -112,7 +112,8 @@ def run(stdscr):
 
     stdscr.nodelay(True)
     curses.curs_set(0)
-    stdscr.addstr(0, 0, "WASD = move, Q = rise, E = fall, SPACE = stop, X = hover, Q to quit")
+    # Note: 'q' is rise, use 'z' to quit (avoid duplicate 'q')
+    stdscr.addstr(0, 0, "WASD = move, Q = rise, E = fall, SPACE = stop, X = hover, Z = quit")
     stdscr.refresh()
 
     forward = 0.0
@@ -121,16 +122,24 @@ def run(stdscr):
 
     try:
         while True:
+            # Read a key (non-blocking)
             key = stdscr.getch()
 
-            if key != -1:
-                if key in (ord("q"), ord("Q")):
+            # If no keypress, reset commands so motors stop on key release.
+            # This ensures that when you release a control key the value returns to 0.
+            if key == -1:
+                forward = 0.0
+                turn = 0.0
+                vertical = 0.0
+            else:
+                # Quit (use 'z' to quit to avoid conflicting with 'q' for rise)
+                if key in (ord("z"), ord("Z")):
                     break
 
                 if key == ord("w"):
-                    forward = 1.0
+                    forward = 0.2
                 elif key == ord("s"):
-                    forward = -1.0
+                    forward = -0.2
                 elif key == ord("a"):
                     turn = -0.7
                 elif key == ord("d"):
@@ -139,10 +148,10 @@ def run(stdscr):
                     forward = turn = vertical = 0.0
                 elif key == ord("x"):
                     vertical = 0.0
-                elif key == ord("q"):  # rise
-                    vertical = 1.0
-                elif key == ord("e"):  # fall
-                    vertical = -1.0
+                elif key == ord("q") or key == ord("Q"):  # rise
+                    vertical = 0.5
+                elif key == ord("e") or key == ord("E"):  # fall
+                    vertical = -0.5
 
                 stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
                 stdscr.refresh()
