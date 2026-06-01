@@ -156,9 +156,9 @@ def run(stdscr):
                 elif key == ord("x"):
                     vertical = 0.0
                 elif key == ord("q") or key == ord("Q"):  # rise
-                    vertical = 0.5
+                    vertical = 0.1
                 elif key == ord("e") or key == ord("E"):  # fall
-                    vertical = -0.5
+                    vertical = -0.1
 
                 stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
                 stdscr.refresh()
