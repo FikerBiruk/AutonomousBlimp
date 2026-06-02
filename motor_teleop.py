@@ -144,9 +144,9 @@ def run(stdscr):
                     break
 
                 if key == ord("w"):
-                    forward = 0.2
-                elif key == ord("s"):
                     forward = -0.2
+                elif key == ord("s"):
+                    forward = 0.2
                 elif key == ord("a"):
                     turn = -0.2
                 elif key == ord("d"):
