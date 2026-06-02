@@ -148,17 +148,17 @@ def run(stdscr):
                 elif key == ord("s"):
                     forward = -0.2
                 elif key == ord("a"):
-                    turn = -0.7
+                    turn = -0.2
                 elif key == ord("d"):
-                    turn = 0.7
+                    turn = 0.2
                 elif key == ord(" "):
                     forward = turn = vertical = 0.0
                 elif key == ord("x"):
                     vertical = 0.0
                 elif key == ord("q") or key == ord("Q"):  # rise
-                    vertical = 0.1
+                    vertical = 0.2
                 elif key == ord("e") or key == ord("E"):  # fall
-                    vertical = -0.1
+                    vertical = -0.2
 
                 stdscr.addstr(2, 0, f"FWD={forward:.1f}  TURN={turn:.1f}  VERT={vertical:.1f}   ")
                 stdscr.refresh()
