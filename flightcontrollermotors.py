@@ -15,7 +15,7 @@ importlib.reload(sensors)
 # PID controllers
 # -------------------------
 
-yaw_pid   = PID(kp=0.02, ki=0.0, kd=0.0, setpoint=0.0, output_limits=(-1.0, 1.0))
+yaw_pid   = PID(kp=0.002, ki=0.0, kd=0.0, setpoint=0.0, output_limits=(-1.0, 1.0))
 pitch_pid = PID(kp=0.03, ki=0.0, kd=0.004, setpoint=0.0, output_limits=(-1.0, 1.0))
 roll_pid  = PID(kp=0.03, ki=0.0, kd=0.004, setpoint=0.0, output_limits=(-1.0, 1.0))
 
