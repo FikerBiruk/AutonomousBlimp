@@ -1,8 +1,8 @@
 """
 need to INSTALL these stuff for it to work.
 
-sudo apt-get update
-sudo apt-get install -y python3-opencv python3-pip
+sudo apt update
+sudo apt install -y python3-opencv python3-pip
 pip3 install pupil-apriltags numpy
 
 """
@@ -27,8 +27,32 @@ class AprilTagDetector:
             debug=0
         )
         self.tag_size = tag_size
-        self.camera = cv2.VideoCapture(camera_id)
+        self.camera = self._open_camera(camera_id)
+        if not self.camera or not self.camera.isOpened():
+            raise RuntimeError(
+                "No camera is available. Enable the Pi camera in raspi-config "
+                "and make sure /dev/video0 exists, then run the script again."
+            )
         self.setup_camera()
+
+    def _open_camera(self, camera_id: int):
+        """Try common Raspberry Pi camera paths in a reliable order."""
+        candidates = [camera_id, 0, 1, "/dev/video0", "/dev/video1"]
+
+        for candidate in candidates:
+            try:
+                if isinstance(candidate, str):
+                    cap = cv2.VideoCapture(candidate, cv2.CAP_V4L2)
+                else:
+                    cap = cv2.VideoCapture(candidate)
+
+                if cap is not None and cap.isOpened():
+                    print(f"Camera opened successfully using: {candidate}")
+                    return cap
+            except Exception:
+                continue
+
+        return None
         
     def setup_camera(self):
         """Configure camera for optimal performance on Pi Zero 2W"""
