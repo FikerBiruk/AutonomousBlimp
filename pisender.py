@@ -23,7 +23,7 @@ import struct
 import cv2
 import time
 
-LAPTOP_IP = "172.20.10.13"   ##########################
+LAPTOP_IP = "172.20.10.13"   ## IP OF LAPTOP CHANGE ACCORDINGLY
 PORT = 9999
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
