@@ -62,7 +62,7 @@ import numpy as np
 KNOWN_FACES_DIR = "known_faces"
 
 # How strict the match is. face_recognition compares the Euclidean distance
-# between two 128-d embeddings: smaller distance == more similar. The default
+# between two 128-d embeddings: smaller distance == more similar. The defaultq
 # tolerance of 0.6 is what the dlib examples use; lower it (e.g. 0.45) to be
 # more strict, raise it (e.g. 0.55) to be more permissive.
 MATCH_TOLERANCE = 0.5
