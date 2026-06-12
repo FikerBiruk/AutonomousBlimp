@@ -1,21 +1,21 @@
 """
-webcam_gesture_detect.py
+hand_gestures.py
 
-Hand gesture detection from the laptop camera. This version adapts the
-background-subtraction and finger-counting approach from:
+Standalone OpenCV hand gesture recognizer adapted from:
 https://github.com/cesar-cipher/Python-Hand-Gesture-Recognition
 
-Gestures:
-    Fist / 0 fingers      -> "COME HERE"
-    Open hand / 4-5 count -> "STOP"
-
-No face detector is loaded or used.
+Recognizes:
+    Waving
+    Rock      (0 fingers)
+    Pointing  (1 finger)
+    Scissors  (2 fingers)
+    Open hand (4-5 fingers)
 
 Requirements:
     pip install opencv-python numpy
 
 Run:
-    python webcam_gesture_detect.py
+    python hand_gestures.py
 
 Controls:
     q  quit
@@ -39,6 +39,8 @@ CALIBRATION_FRAMES = 30
 BACKGROUND_WEIGHT = 0.5
 OBJECT_THRESHOLD = 18
 GESTURE_HISTORY = 12
+WAVE_CHECK_INTERVAL = 8
+WAVE_MIN_DELTA = 18
 
 ROI_TOP = 40
 ROI_BOTTOM = 360
@@ -47,7 +49,7 @@ ROI_RIGHT = 620
 
 MIN_HAND_AREA = 2_500
 BOX_COLOR = (0, 255, 0)
-TEXT_COLOR = (0, 255, 0)
+TEXT_COLOR = (255, 255, 255)
 TEXT_SHADOW = (0, 0, 0)
 ROI_COLOR = (255, 255, 255)
 
@@ -59,8 +61,10 @@ class HandData:
     left: tuple[int, int]
     right: tuple[int, int]
     center_x: int
-    fingers: int = 0
+    previous_center_x: int = 0
     is_in_frame: bool = True
+    is_waving: bool = False
+    fingers: int = 0
     gesture_history: deque[int] = field(default_factory=lambda: deque(maxlen=GESTURE_HISTORY))
 
     def update(
@@ -77,6 +81,11 @@ class HandData:
         self.center_x = int((left[0] + right[0]) / 2)
         self.is_in_frame = True
 
+    def check_for_waving(self, center_x: int) -> None:
+        self.previous_center_x = self.center_x
+        self.center_x = center_x
+        self.is_waving = abs(self.center_x - self.previous_center_x) >= WAVE_MIN_DELTA
+
     def update_fingers(self, finger_count: int) -> None:
         self.gesture_history.append(finger_count)
         if len(self.gesture_history) == self.gesture_history.maxlen:
@@ -89,14 +98,14 @@ frames_elapsed = 0
 
 
 def get_region(frame: np.ndarray) -> np.ndarray:
-    """Crop and prepare the hand region for background subtraction."""
+    """Crop and prepare the hand ROI for background subtraction."""
     region = frame[ROI_TOP:ROI_BOTTOM, ROI_LEFT:ROI_RIGHT]
     region = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-    region = cv2.GaussianBlur(region, (5, 5), 0)
-    return region
+    return cv2.GaussianBlur(region, (5, 5), 0)
 
 
 def update_background(region: np.ndarray) -> None:
+    """Build a running average of the empty ROI during calibration."""
     global background
 
     if background is None:
@@ -107,7 +116,7 @@ def update_background(region: np.ndarray) -> None:
 
 
 def segment_hand(region: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
-    """Return threshold image and largest foreground contour in the ROI."""
+    """Return the threshold image and largest foreground contour in the ROI."""
     global hand
 
     if background is None:
@@ -126,12 +135,14 @@ def segment_hand(region: np.ndarray) -> tuple[np.ndarray, np.ndarray] | None:
     if not contours:
         if hand is not None:
             hand.is_in_frame = False
+            hand.is_waving = False
         return None
 
     return threshold, max(contours, key=cv2.contourArea)
 
 
 def update_hand_data(threshold: np.ndarray, contour: np.ndarray) -> None:
+    """Update hand bounds, waving state, and smoothed finger count."""
     global hand
 
     hull = cv2.convexHull(contour)
@@ -146,11 +157,14 @@ def update_hand_data(threshold: np.ndarray, contour: np.ndarray) -> None:
     else:
         hand.update(top, bottom, left, right)
 
+    if frames_elapsed % WAVE_CHECK_INTERVAL == 0:
+        hand.check_for_waving(center_x)
+
     hand.update_fingers(count_fingers(threshold))
 
 
 def count_fingers(threshold: np.ndarray) -> int:
-    """Estimate raised fingers by counting line intersections near the fingertips."""
+    """Estimate raised fingers by counting hand intersections near the fingertips."""
     if hand is None:
         return 0
 
@@ -159,7 +173,7 @@ def count_fingers(threshold: np.ndarray) -> int:
     if hand_height <= 0 or hand_width <= 0:
         return 0
 
-    line_height = int(hand.top[1] + 0.22 * hand_height)
+    line_height = int(hand.top[1] + 0.2 * hand_height)
     line_height = max(0, min(line_height, threshold.shape[0] - 1))
 
     line_mask = np.zeros(threshold.shape[:2], dtype=np.uint8)
@@ -178,22 +192,25 @@ def count_fingers(threshold: np.ndarray) -> int:
     return min(fingers, 5)
 
 
-def gesture_text() -> str:
+def current_gesture() -> str:
     if frames_elapsed < CALIBRATION_FRAMES:
         return "Calibrating..."
     if hand is None or not hand.is_in_frame:
         return "No hand detected"
+    if hand.is_waving:
+        return "Waving"
     if hand.fingers == 0:
-        return "COME HERE"
+        return "Fist"
+    if hand.fingers == 1:
+        return "Pointing"
+    if hand.fingers == 2:
+        return "Scissor"
     if hand.fingers >= 4:
-        return "STOP"
-    return ""
+        return "Open hand"
+    return f"{hand.fingers} fingers"
 
 
 def draw_text(frame: np.ndarray, text: str, x: int = 12, y: int = 36) -> None:
-    if not text:
-        return
-
     font = cv2.FONT_HERSHEY_SIMPLEX
     scale = 1.0
     thickness = 3
@@ -202,9 +219,9 @@ def draw_text(frame: np.ndarray, text: str, x: int = 12, y: int = 36) -> None:
 
 
 def draw_hand_box(frame: np.ndarray, contour: np.ndarray) -> None:
-    x, y, w, h = cv2.boundingRect(contour)
+    x, y, width, height = cv2.boundingRect(contour)
     top_left = (ROI_LEFT + x, ROI_TOP + y)
-    bottom_right = (ROI_LEFT + x + w, ROI_TOP + y + h)
+    bottom_right = (ROI_LEFT + x + width, ROI_TOP + y + height)
     cv2.rectangle(frame, top_left, bottom_right, BOX_COLOR, 3)
 
 
@@ -247,11 +264,11 @@ def main() -> int:
                 threshold, contour = segmented
                 update_hand_data(threshold, contour)
                 draw_hand_box(frame, contour)
+                cv2.imshow("Segmented Hand", threshold)
 
         cv2.rectangle(frame, (ROI_LEFT, ROI_TOP), (ROI_RIGHT, ROI_BOTTOM), ROI_COLOR, 2)
-        draw_text(frame, gesture_text())
-
-        cv2.imshow("Hand Gesture Detection - q to quit", frame)
+        draw_text(frame, current_gesture())
+        cv2.imshow("Hand Gesture Recognition - q to quit", frame)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
